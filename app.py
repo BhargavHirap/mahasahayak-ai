@@ -31,9 +31,12 @@ st.set_page_config(page_title="मराठी एआय", page_icon="🙏", lay
 # ---------------- Helpers ----------------
 def get_secret(name: str):
     try:
-        return st.secrets[name]
+        val = st.secrets[name]
+        if isinstance(val, str):
+            return val.strip().strip('"').strip("'").strip()
+        return val
     except Exception:
-        return os.environ.get(name)
+        return os.environ.get(name, "").strip() if os.environ.get(name) else None
 
 def tokenize(text: str) -> set:
     return set(re.findall(r"[\w\u0900-\u097F]+", text.lower()))
