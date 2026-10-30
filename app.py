@@ -90,7 +90,7 @@ try:
     model_name = flash_models[0] if flash_models else available[0]
     model_name = model_name.replace("models/", "")
 except Exception:
-    model_name = "gemini-2.5-flash"
+    model_name = "gemini-3.8-flash"
 
 model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
 
