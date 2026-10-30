@@ -5,12 +5,15 @@ import re
 from pathlib import Path
 
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 # ---------------- Config ----------------
 SCHEMES_FILE = Path("schemes.csv")
 MAX_MESSAGES_SENT = 20
 TOP_SCHEMES = 5
+# Google ne bola ye naya model use karne ko
+MODEL = "gemini-2.5-flash"
 
 SYSTEM_PROMPT = """तू 'मराठी एआय' आहेस — वापरकर्त्याचा वैयक्तिक सहाय्यक. Bhargav ने तुला बनवले आहे मुंबई मध्ये.
 - वापरकर्ता ज्या भाषेत लिहितो त्याच भाषेत उत्तर दे. डिफॉल्ट भाषा: सोपी, स्पष्ट मराठी.
@@ -47,21 +50,6 @@ def load_repo_schemes() -> list:
         return parse_schemes(SCHEMES_FILE.read_bytes())
     return []
 
-def find_schemes(schemes: list, question: str) -> str:
-    q = tokenize(question)
-    if not q or not schemes:
-        return ""
-    scored = []
-    for tokens, text in schemes:
-        score = len(q & tokens)
-        if score >= 2:
-            scored.append((score, text))
-    if not scored:
-        return ""
-    scored.sort(key=lambda x: x[0], reverse=True)
-    best = "\n".join(f"- {t[:700]}" for _, t in scored[:TOP_SCHEMES])
-    return f"[योजना माहिती]\n{best}\n[/योजना माहिती]\n\n"
-
 # Password gate
 app_password = get_secret("APP_PASSWORD")
 if app_password and not st.session_state.get("authed"):
@@ -81,34 +69,15 @@ if not api_key:
     st.error("GEMINI_API_KEY सेट केलेली नाही.")
     st.stop()
 
-genai.configure(api_key=api_key)
-
-# Auto-find model
-try:
-    available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    flash_models = [m for m in available if 'flash' in m.lower()]
-    model_name = flash_models[0] if flash_models else available[0]
-    model_name = model_name.replace("models/", "")
-except Exception:
-    model_name = "gemini-3.8-flash"
-
-model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
-
-# Sidebar
+client = genai.Client(api_key=api_key)
 schemes = load_repo_schemes()
+
 with st.sidebar:
     st.header("⚙️ सेटिंग्ज")
-    st.success("✅ FREE Mode")
-    st.caption(f"Model: {model_name}")
-    uploaded = st.file_uploader("योजनांची CSV (ऐच्छिक)", type="csv")
-    if uploaded is not None:
-        try:
-            schemes = parse_schemes(uploaded.getvalue())
-        except Exception:
-            st.error("CSV वाचता आली नाही.")
-    use_schemes = st.toggle("योजना माहिती वापरा", value=bool(schemes), disabled=not schemes)
-    if schemes:
-        st.caption(f"{len(schemes)} योजना लोड झाल्या.")
+    st.success("✅ NEW API - FREE")
+    st.caption(f"Model: {MODEL}")
+
+with st.sidebar:
     if st.button("🆕 नवीन चॅट", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
@@ -129,29 +98,29 @@ if prompt := st.chat_input("तुमचा प्रश्न येथे ल�
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    history = st.session_state.messages[-MAX_MESSAGES_SENT:]
-    while history and history[0]["role"] != "user":
-        history = history[1:]
+    try:
+        # Naya API call
+        contents = []
+        for msg in st.session_state.messages[-MAX_MESSAGES_SENT:]:
+            role = "user" if msg["role"] == "user" else "model"
+            contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg["content"])]))
 
-    context = find_schemes(schemes, prompt) if (schemes and use_schemes) else ""
-    final_prompt = context + prompt
-
-    gemini_history = []
-    for msg in history[:-1]:
-        role = "user" if msg["role"] == "user" else "model"
-        gemini_history.append({"role": role, "parts": [msg["content"]]})
-
-    with st.chat_message("assistant"):
-        try:
-            chat = model.start_chat(history=gemini_history)
-            response = chat.send_message(final_prompt, stream=True)
-            full_text = ""
+        with st.chat_message("assistant"):
             placeholder = st.empty()
-            for chunk in response:
+            full_text = ""
+            stream = client.models.generate_content_stream(
+                model=MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT
+                )
+            )
+            for chunk in stream:
                 if chunk.text:
                     full_text += chunk.text
                     placeholder.markdown(full_text + "▌")
             placeholder.markdown(full_text)
             st.session_state.messages.append({"role": "assistant", "content": full_text})
-        except Exception as e:
-            st.error(f"त्रुटी: {e}")
+    except Exception as e:
+        st.error(f"त्रुटी: {e}")
+        st.info("Agar model error aaye toh MODEL ko 'gemini-3.8-flash' ya 'gemini-2.0-flash-lite' karke try karo")
