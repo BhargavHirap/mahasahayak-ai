@@ -3,3 +3,5 @@ requests
 gtts
 SpeechRecognition
 beautifulsoup4
+streamlit>=1.40
+anthropic>=0.40
