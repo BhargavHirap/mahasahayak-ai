@@ -14,7 +14,7 @@ import streamlit as st
 import google.generativeai as genai
 
 # ---------------- Config ----------------
-MODEL = "gemini-1.5-flash"
+MODEL = "gemini-2.0-flash"
 SCHEMES_FILE = Path("schemes.csv")
 MAX_MESSAGES_SENT = 20
 TOP_SCHEMES = 5
@@ -86,8 +86,6 @@ if app_password and not st.session_state.get("authed"):
 
 # ---------------- FREE API key ----------------
 api_key = get_secret("GEMINI_API_KEY")
-st.write("Debug: Secrets keys found:", list(st.secrets.keys()))
-st.write("Debug: Key length:", len(api_key) if api_key else "No key")
 if not api_key:
     st.error("GEMINI_API_KEY सेट केलेली नाही.")
     st.info("""
