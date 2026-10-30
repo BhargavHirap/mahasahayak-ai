@@ -89,7 +89,7 @@ def stream_reply(client, messages):
 
 
 # ---------------- Optional password gate ----------------
-app_password = get_secret("1234")
+app_password = get_secret("APP_PASSWORD")
 if app_password and not st.session_state.get("authed"):
     st.title("🙏 मराठी एआय")
     pw = st.text_input("पासवर्ड", type="password")
@@ -102,7 +102,7 @@ if app_password and not st.session_state.get("authed"):
     st.stop()
 
 # ---------------- API key ----------------
-api_key = get_secret("myuser")
+api_key = get_secret("ANTHROPIC_API_KEY")
 if not api_key:
     st.error("ANTHROPIC_API_KEY सेट केलेली नाही. README मधील सूचना पहा.")
     st.stop()
