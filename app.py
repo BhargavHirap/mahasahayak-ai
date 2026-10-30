@@ -23,7 +23,7 @@ with col2:
 if ask_btn and q:
     found = False
     for key in SCHEMES:
-        if key in q or key.lower() in q.lower():
+        if key in q:
             st.success(SCHEMES[key])
             st.link_button("🔗 अधिकृत वेबसाइट उघडा", "https://mahadbt.maharashtra.gov.in")
             st.caption("Source: maharashtra.gov.in | Verified: Oct 2026")
