@@ -14,7 +14,7 @@ import anthropic
 import streamlit as st
 
 # ---------------- Config ----------------
-MODEL = "claude-sonnet-5-5"
+MODEL = "claude-3-5-sonnet-20241022"
 SCHEMES_FILE = Path("schemes.csv")  # optional, put it next to app.py
 MAX_MESSAGES_SENT = 20
 TOP_SCHEMES = 5
