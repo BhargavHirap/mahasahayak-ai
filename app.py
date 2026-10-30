@@ -14,7 +14,8 @@ import streamlit as st
 import google.generativeai as genai
 
 # ---------------- Config ----------------
-MODEL = "gemini-2.0-flash"
+# ---------------- Config ----------------
+# MODEL auto-detect hoga, tension nahi
 SCHEMES_FILE = Path("schemes.csv")
 MAX_MESSAGES_SENT = 20
 TOP_SCHEMES = 5
@@ -99,13 +100,26 @@ if not api_key:
     st.stop()
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel(MODEL, system_instruction=SYSTEM_PROMPT)
+
+# Auto-find best free model
+try:
+    available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+    # Flash models ko priority de
+    flash_models = [m for m in available if 'flash' in m.lower()]
+    model_name = flash_models[0] if flash_models else available[0]
+    # 'models/' hata de
+    model_name = model_name.replace("models/", "")
+except:
+    model_name = "gemini-2.5-flash"  # fallback
+
+model = genai.GenerativeModel(model_name, system_instruction=SYSTEM_PROMPT)
 
 # ---------------- Sidebar ----------------
 schemes = load_repo_schemes()
 with st.sidebar:
     st.header("⚙️ सेटिंग्ज")
     st.success("✅ FREE Gemini Mode - No Credits!")
+st.caption(f"Model: {model_name}")
 
     uploaded = st.file_uploader("योजनांची CSV (ऐच्छिक)", type="csv")
     if uploaded is not None:
