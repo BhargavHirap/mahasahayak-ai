@@ -172,9 +172,44 @@ if prompt := st.chat_input("तुमचा प्रश्न येथे ल�
     with st.chat_message("assistant"):
         try:
             with st.spinner("उत्तर तयार होत आहे..."):
-                reply = generate_reply(client, history, context)
-            st.markdown(reply)
-            st.session_state.messages.append({"role": "assistant", "content": reply})
+                reply = import time
+
+def generate_reply(client, messages, context=""):
+    api_messages = []
+    for index, message in enumerate(messages):
+        content = message["content"]
+        if index == len(messages) - 1:
+            content = context + content
+        role = "user" if message["role"] == "user" else "model"
+        api_messages.append({"role": role, "parts": [{"text": content}]})
+
+    last_error = None
+    for model_name in MODELS_TO_TRY:
+        for attempt in range(3): # pratyek model 3 vela try
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=api_messages,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        max_output_tokens=1500,
+                        temperature=0.7
+                    )
+                )
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                last_error = e
+                err_str = str(e)
+                if "503" in err_str or "UNAVAILABLE" in err_str:
+                    time.sleep(2 * (attempt + 1)) # 2, 4, 6 sec wait
+                    continue
+                else:
+                    break # 404 asel tar pudhchya model var ja
+        # pudhcha model try
+    
+    # Jar ithparyant ala tar sagle busy
+    raise Exception(f"Google servers busy ahet (503). 2-3 minute ni parat try kara. Last error: {last_error}") st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
             st.error(f"AI Error: {e}")
             if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
