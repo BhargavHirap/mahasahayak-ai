@@ -20,10 +20,6 @@ for m in st.session_state.messages:
 # Sabse latest se purane tak try karenge
 MODELS_TO_TRY = [
     "gemini-3.8-flash",
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-flash-latest",
-    "gemini-2.0-flash-lite",
 ]
 
 if prompt := st.chat_input("तुमचा प्रश्न येथे लिहा..."):
